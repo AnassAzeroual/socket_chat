@@ -12,7 +12,7 @@ var http = require('http');
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '3000');
+var port = normalizePort(process.env.PORT || '4000');
 app.set('port', port);
 
 /**
@@ -24,40 +24,38 @@ var server = http.createServer(app);
 var io = require('socket.io').listen(server);
 
 io.on('connection',(socket)=>{
-
     console.log('new connection made.');
-
-
-    socket.on('join', function(data){
-      //joining
-      socket.join(data.room);
-
-      console.log(data.user + 'joined the room : ' + data.room);
-
-      socket.broadcast.to(data.room).emit('new user joined', {user:data.user, message:'has joined this room.'});
-    });
-
-
-    socket.on('leave', function(data){
-    
-      console.log(data.user + 'left the room : ' + data.room);
-
-      socket.broadcast.to(data.room).emit('left room', {user:data.user, message:'has left this room.'});
-
-      socket.leave(data.room);
-    });
-
-    socket.on('message',function(data){
-      console.log('data');
-      console.log(data);
-      io.in(data.room).emit('new message',
-      {
-        user:data.user, 
-        host_id:data.host_id, 
-        message:data.message, 
-        room:data.room
+    if(socket['handshake']['headers']['origin']=="http://localhost:4200" || socket['handshake']['headers']['origin']=="http://localhost:4201")
+    {
+      socket.on('join', function(data){
+        //Un utilsateur à rejoins la conversation
+        socket.join(data.room);
+        console.log(data.user + 'joined the room : ' + data.room);
+        socket.broadcast.to(data.room).emit('new user joined', {user:data.user, message:'has joined this room.'});
       });
-    })
+  
+      socket.on('leave', function(data){
+        //Un utilsateur à quitte la conversation
+        console.log(data.user + 'left the room : ' + data.room);
+        socket.broadcast.to(data.room).emit('left room', {user:data.user, message:'has left this room.'});
+        socket.leave(data.room);
+      });
+  
+      socket.on('message',function(data){
+        //Un utilsateur à envoie un message dans une conversation
+        console.log("data");
+        console.log(data);
+        
+        console.log(`User :${data.user}, Room :${data.room}, Message :${data.message} `);
+        io.in(data.room).emit('new message',
+        {
+          user:data.user, 
+          host_id:data.host_id, 
+          message:data.message, 
+          room:data.room
+        });
+      })
+    }
 });
 
 /**
